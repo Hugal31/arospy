@@ -14,10 +14,13 @@ class Subscriber:
     Can be used as an async source (i.e. iterator).
     """
 
-    def __init__(self, name: str, data_class, buff_size=rospy.topics.DEFAULT_BUFF_SIZE):
+    def __init__(self, name: str,
+                 data_class,
+                 buff_size=rospy.topics.DEFAULT_BUFF_SIZE,
+                 event_loop=asyncio.get_event_loop()):
         self.inner = rospy.Subscriber(name, data_class, callback=self._on_message, buff_size=buff_size)
         self.queue = asyncio.Queue(maxsize=buff_size)
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = event_loop
 
         _logger.debug(f"Subscriber({name}, {data_class}) created in thread {threading.get_ident()}")
 
