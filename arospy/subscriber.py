@@ -45,6 +45,9 @@ class Subscriber:
 
     def _on_message(self, message):
         _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
+        if self.event_loop.is_closed():
+            self.inner.unregister()
+            return
         self.event_loop.call_soon_threadsafe(self._put_message, message)
 
     def _put_message(self, message):

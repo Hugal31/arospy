@@ -46,5 +46,9 @@ class Service:
 
     def _handle_request(self, request):
         _logger.debug(f"Service {self.inner.resolved_name} received request {request} in thread {threading.get_ident()}")
+        if self.event_loop.is_closed():
+            self.inner.shutdown()
+            return
+
         future = asyncio.run_coroutine_threadsafe(self.handler(request), loop=self.event_loop)
         return future.result()
