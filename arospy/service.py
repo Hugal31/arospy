@@ -17,9 +17,9 @@ class ServiceProxy:
                  service_class,
                  persistent: bool = False,
                  headers=None,
-                 event_loop=asyncio.get_event_loop()):
+                 event_loop=None):
         self.inner = rospy.ServiceProxy(name, service_class, persistent=persistent, headers=headers)
-        self.event_loop = event_loop
+        self.event_loop = event_loop if event_loop is not None else asyncio.get_running_loop()
 
     async def wait_for_service(self, timeout=None):
         await self.event_loop.run_in_executor(None, self.inner.wait_for_service, timeout)
@@ -38,7 +38,7 @@ class Service:
                  service_class,
                  handler: typing.Callable[[typing.Any], typing.Awaitable[typing.Any]],
                  buff_size=rospy.topics.DEFAULT_BUFF_SIZE,
-                 event_loop=asyncio.get_event_loop()):
+                 event_loop=None):
         """
         :param name:
         :param service_class:
@@ -47,7 +47,7 @@ class Service:
         """
         self.inner = rospy.Service(name, service_class, handler=self._handle_request, buff_size=buff_size)
         self.handler = handler
-        self.event_loop = event_loop
+        self.event_loop = event_loop if event_loop is not None else asyncio.get_running_loop()
 
     def _handle_request(self, request):
         _logger.debug(f"Service {self.inner.resolved_name} received request {request} in thread {threading.get_ident()}")
