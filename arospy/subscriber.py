@@ -16,10 +16,15 @@ class Subscriber:
 
     def __init__(self, name: str,
                  data_class,
+                 queue_size=None,
                  buff_size=rospy.topics.DEFAULT_BUFF_SIZE,
                  event_loop=asyncio.get_event_loop()):
-        self.inner = rospy.Subscriber(name, data_class, callback=self._on_message, buff_size=buff_size)
-        self.queue = asyncio.Queue(maxsize=buff_size)
+        self.inner = rospy.Subscriber(name,
+                                      data_class,
+                                      callback=self._on_message,
+                                      queue_size=queue_size,
+                                      buff_size=buff_size)
+        self.queue = asyncio.Queue(maxsize=queue_size if queue_size is not None else 0)
         self.event_loop = event_loop
 
         _logger.debug(f"Subscriber({name}, {data_class}) created in thread {threading.get_ident()}")
@@ -45,6 +50,7 @@ class Subscriber:
         message = None
         while not self.queue.empty():
             message = self.queue.get_nowait()
+        return message
 
     def _on_message(self, message):
         _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
