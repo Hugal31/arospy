@@ -40,7 +40,8 @@ class Subscriber:
         self.inner.unregister()
 
     async def get_next_message(self):
-        return await self.queue.get()
+        self._last_message = await self.queue.get()
+        return self._last_message
 
     async def get_latest_message(self):
         """Return the last available message, or wait if not was received."""
