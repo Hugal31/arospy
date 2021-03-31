@@ -26,6 +26,7 @@ class Subscriber:
                                       buff_size=buff_size)
         self.queue = asyncio.Queue(maxsize=queue_size if queue_size is not None else 0)
         self.event_loop = event_loop if event_loop is not None else asyncio.get_running_loop()
+        self._last_message = None
 
         _logger.debug(f"Subscriber({name}, {data_class}) created in thread {threading.get_ident()}")
 
@@ -35,22 +36,23 @@ class Subscriber:
     def __anext__(self):
         return self.get_next_message()
 
+    def unregister(self):
+        self.inner.unregister()
+
     async def get_next_message(self):
         return await self.queue.get()
 
     async def get_latest_message(self):
-        """Return the last available message, or wait"""
-        message = await self.queue.get()
-        while not self.queue.empty():
-            message = self.queue.get_nowait()
-        return message
+        """Return the last available message, or wait if not was received."""
+        if self._last_message is None:
+            self._last_message = await self.queue.get()
+        return self.get_latest_message_nowait()
 
     def get_latest_message_nowait(self):
         """Return the last available message for now, or return None"""
-        message = None
         while not self.queue.empty():
-            message = self.queue.get_nowait()
-        return message
+            self._last_message = self.queue.get_nowait()
+        return self._last_message
 
     def _on_message(self, message):
         _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
