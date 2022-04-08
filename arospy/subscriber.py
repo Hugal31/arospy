@@ -55,6 +55,10 @@ class Subscriber:
             self._last_message = self.queue.get_nowait()
         return self._last_message
 
+    def clear_message_queue(self):
+        """Remove all message from the queue, so a call get_next_message would block."""
+        self.get_latest_message_nowait()
+
     def _on_message(self, message):
         _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
         if self.event_loop.is_closed():
