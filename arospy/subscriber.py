@@ -19,14 +19,19 @@ class Subscriber:
                  queue_size=None,
                  buff_size=rospy.topics.DEFAULT_BUFF_SIZE,
                  event_loop=None):
-        self.inner = rospy.Subscriber(name,
-                                      data_class,
-                                      callback=self._on_message,
-                                      queue_size=queue_size,
-                                      buff_size=buff_size)
-        self.queue = asyncio.Queue(maxsize=queue_size if queue_size is not None else 0)
-        self.event_loop = event_loop if event_loop is not None else asyncio.get_running_loop()
-        self._last_message = None
+        self.mutex = threading.RLock()
+        # Lock on creation because rospy.Subscriber can start to call _on_message before self.inner is initialized.
+        # (In the same thread or not).
+        with self.mutex:
+            self.queue = asyncio.Queue(maxsize=queue_size if queue_size is not None else 0)
+            self.event_loop = event_loop if event_loop is not None else asyncio.get_running_loop()
+            self._last_message = None
+            self.inner = None
+            self.inner = rospy.Subscriber(name,
+                                          data_class,
+                                          callback=self._on_message,
+                                          queue_size=queue_size,
+                                          buff_size=buff_size)
 
         _logger.debug(f"Subscriber({name}, {data_class}) created in thread {threading.get_ident()}")
 
@@ -60,10 +65,12 @@ class Subscriber:
         self.get_latest_message_nowait()
 
     def _on_message(self, message):
-        _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
-        if self.event_loop.is_closed():
-            self.inner.unregister()
-            return
+        with self.mutex:
+            if self.inner is not None:
+                _logger.debug(f"Subscriber({self.inner.name}) received a message in {threading.get_ident()}")
+                if self.event_loop.is_closed():
+                    self.inner.unregister()
+                    return
         self.event_loop.call_soon_threadsafe(self._put_message, message)
 
     def _put_message(self, message):
