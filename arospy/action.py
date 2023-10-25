@@ -25,7 +25,16 @@ class SimpleActionClient:
                             active_cb=self._inner_active_cb if active_cb is not None else None,
                             feedback_cb=self._inner_feedback_cb if feedback_cb is not None else None)
 
-    async def send_goal_and_wait(self, goal, execute_timeout=rospy.Duration(), preempt_timeout=rospy.Duration()):
+    async def send_goal_and_wait(self,
+                                 goal,
+                                 execute_timeout=rospy.Duration(),
+                                 preempt_timeout=rospy.Duration()):
+        """
+        :param goal: The goal to send to the server
+        :param execute_timeout: The timemout to wait for the execution. Zero (default) means infinte.
+        :param preempt_timeout: The timemout to wait for the cancelation on execution timeout. Zero (default) means infinte.
+        :return: The resulting goal status
+        """
         self.send_goal(goal)
         if not await self.wait_for_result(execute_timeout):
             # preempt action
